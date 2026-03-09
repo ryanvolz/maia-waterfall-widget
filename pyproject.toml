@@ -1,22 +1,44 @@
 [project]
-authors = [{name = "Ryan Volz", email = ""}]
-dependencies = []
-name = "maia-waterfall-widget"
+authors = [{name = "Ryan Volz", email = "rvolz@mit.edu"}]
+dependencies = ["anywidget"]
+name = "maia_waterfall_widget"
 requires-python = ">= 3.11"
 version = "0.1.0"
+readme = "README.md"
 
 [build-system]
 build-backend = "hatchling.build"
 requires = ["hatchling"]
 
+[dependency-groups]
+dev = ["watchfiles", "jupyterlab"]
+
 [tool.pixi.workspace]
 channels = ["https://prefix.dev/conda-forge"]
 platforms = ["linux-64"]
 
-#[tool.pixi.pypi-dependencies]
-#maia_waterfall_widget = { path = ".", editable = true }
+[tool.pixi.pypi-dependencies]
+maia_waterfall_widget = { path = ".", editable = true }
 
-[tool.pixi.tasks]
+[tool.pixi.environments]
+default = { solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
 
 [tool.pixi.dependencies]
 nodejs = ">=25.7.0,<25.8"
+
+[tool.pixi.tasks]
+
+[tool.hatch.build]
+only-packages = true
+artifacts = ["src/maia_waterfall_widget/static/*"]
+
+[tool.hatch.build.hooks.jupyter-builder]
+build-function = "hatch_jupyter_builder.npm_builder"
+ensured-targets = ["src/maia_waterfall_widget/static/widget.js"]
+skip-if-exists = ["src/maia_waterfall_widget/static/widget.js"]
+dependencies = ["hatch-jupyter-builder>=0.5.0"]
+
+[tool.hatch.build.hooks.jupyter-builder.build-kwargs]
+npm = "npm"
+build_cmd = "build"
