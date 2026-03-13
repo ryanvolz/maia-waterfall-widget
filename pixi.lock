@@ -1494,7 +1494,7 @@ packages:
 - pypi: ./
   name: maia-waterfall-widget
   version: 0.1.0
-  sha256: e6871e566a40415eb0b7c2b25d8082c72d8a3dd06cddb97e0adc6d81591509b0
+  sha256: 3f27e52b296156fdd1c43e27d601267baba752c16898c1747cd6b837ac10781f
   requires_dist:
   - anywidget
   requires_python: '>=3.11'
