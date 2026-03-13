@@ -11,5 +11,5 @@ dist
 __pycache__
 .ipynb_checkpoints
 
-rust/target
+bindings/target
 src/maia_waterfall_widget/static

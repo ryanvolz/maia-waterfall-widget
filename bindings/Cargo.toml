@@ -1,9 +1,9 @@
 [package]
-name = "maia-waterfall-widget"
+name = "maia-waterfall-widget-wasm"
 version = "0.1.0"
 edition = "2024"
 authors = ["Ryan Volz <rvolz@mit.edu>"]
-description = "maia-wasm waterfall widget bindings for Javascript"
+description = "Maia SDR waterfall widget WebAssembly bindings"
 license = "MIT"
 publish = false
 
