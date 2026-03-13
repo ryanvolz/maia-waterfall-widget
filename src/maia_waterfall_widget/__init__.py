@@ -25,4 +25,4 @@ else:
 class Widget(anywidget.AnyWidget):
     _esm = ESM
     _css = CSS
-    # value = traitlets.Int(0).tag(sync=True)
+    spectrum_visible = traitlets.Bool(True).tag(sync=True)

@@ -12,8 +12,13 @@ function render({ model, el }) {
   el.appendChild(canvas);
   // defer make_waterfall until the canvas has rendered
   setTimeout(() => {
-    make_waterfall("waterfall");
+    waterfall = make_waterfall("waterfall");
+    // why is waterfall undefined?
+    console.log(waterfall);
+    // waterfall.set_spectrum_visible(model.get("spectrum_visible"));
   }, 10);
+
+  model.on("change:spectrum_visible", () => {});
   console.log("render() done");
 }
 

@@ -1,5 +1,6 @@
+use maia_wasm::render::RenderEngine;
 use maia_wasm::waterfall::Waterfall;
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::prelude::*;
 
 mod ui;
@@ -8,7 +9,21 @@ use ui::Ui;
 const NFFT: usize = 4096;
 
 #[wasm_bindgen]
-pub fn make_waterfall(canvas: &str) -> Result<(), JsValue> {
+pub struct WaterfallJsAPI {
+    waterfall: Rc<RefCell<Waterfall>>,
+    render_engine: Rc<RefCell<RenderEngine>>,
+}
+
+#[wasm_bindgen]
+impl WaterfallJsAPI {
+    #[wasm_bindgen]
+    pub fn set_spectrum_visible(&self, value: bool) {
+        self.waterfall.borrow_mut().set_spectrum_visible(value);
+    }
+}
+
+#[wasm_bindgen]
+pub fn make_waterfall(canvas: &str) -> Result<WaterfallJsAPI, JsValue> {
     let (window, document) = maia_wasm::get_window_and_document()?;
     let canvas = Rc::new(
         document
@@ -45,8 +60,8 @@ pub fn make_waterfall(canvas: &str) -> Result<(), JsValue> {
         interval_ms,
     )?;
 
-    maia_wasm::setup_render_loop(render_engine, waterfall);
-    Ok(())
+    maia_wasm::setup_render_loop(render_engine.clone(), waterfall.clone());
+    Ok(WaterfallJsAPI{waterfall: waterfall, render_engine: render_engine})
 }
 
 // We generate waterfall lines by reading a JPEG file that is embedded in the wasm file
