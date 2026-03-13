@@ -9,15 +9,6 @@ const NFFT: usize = 4096;
 
 #[wasm_bindgen]
 pub fn make_waterfall(canvas: &str) -> Result<(), JsValue> {
-    setup_waterfall(canvas, false)
-}
-
-#[wasm_bindgen]
-pub fn make_waterfall_with_ui(canvas: &str) -> Result<(), JsValue> {
-    setup_waterfall(canvas, true)
-}
-
-fn setup_waterfall(canvas: &str, with_ui: bool) -> Result<(), JsValue> {
     let (window, document) = maia_wasm::get_window_and_document()?;
     let canvas = Rc::new(
         document
@@ -26,15 +17,6 @@ fn setup_waterfall(canvas: &str, with_ui: bool) -> Result<(), JsValue> {
             .dyn_into::<web_sys::HtmlCanvasElement>()?,
     );
     let (render_engine, waterfall, _) = maia_wasm::new_waterfall(&window, &document, &canvas)?;
-
-    if with_ui {
-        Ui::new(
-            Rc::clone(&window),
-            &document,
-            Rc::clone(&render_engine),
-            Rc::clone(&waterfall),
-        )?;
-    }
 
     let center_freq = 915e6;
     let samp_rate = 960e3;
