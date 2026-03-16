@@ -16,19 +16,24 @@ pub struct WaterfallJsAPI {
 
 #[wasm_bindgen]
 impl WaterfallJsAPI {
-    #[wasm_bindgen]
+    #[wasm_bindgen(getter)]
+    pub fn spectrum_visible(&self) -> bool {
+        self.waterfall.borrow_mut().is_spectrum_visible()
+    }
+
+    #[wasm_bindgen(setter)]
     pub fn set_spectrum_visible(&self, value: bool) {
         self.waterfall.borrow_mut().set_spectrum_visible(value);
     }
 }
 
 #[wasm_bindgen]
-pub fn make_waterfall(canvas: &str) -> Result<WaterfallJsAPI, JsValue> {
+pub fn make_waterfall(canvas_id: &str) -> Result<WaterfallJsAPI, JsValue> {
     let (window, document) = maia_wasm::get_window_and_document()?;
     let canvas = Rc::new(
         document
-            .get_element_by_id(canvas)
-            .ok_or(&format!("unable to get {canvas} canvas element"))?
+            .get_element_by_id(canvas_id)
+            .ok_or(&format!("unable to get {canvas_id} canvas element"))?
             .dyn_into::<web_sys::HtmlCanvasElement>()?,
     );
     let (render_engine, waterfall, _) = maia_wasm::new_waterfall(&window, &document, &canvas)?;
