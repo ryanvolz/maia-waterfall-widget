@@ -1,14 +1,22 @@
 use maia_wasm::render::RenderEngine;
+use maia_wasm::ui::colormap::Colormap;
 use maia_wasm::waterfall::Waterfall;
 use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::prelude::*;
 
-mod ui;
-use ui::Ui;
-
 const NFFT: usize = 4096;
 
+fn colormap_from_string(colormap_str: &str) -> Result<Colormap, &str> {
+    match colormap_str {
+        "turbo" => Ok(Colormap::Turbo),
+        "viridis" => Ok(Colormap::Viridis),
+        "inferno" => Ok(Colormap::Inferno),
+        _ => Err("invalid colormap name"),
+    }
+}
+
 #[wasm_bindgen]
+#[derive(Clone)]
 pub struct WaterfallJsAPI {
     waterfall: Rc<RefCell<Waterfall>>,
     render_engine: Rc<RefCell<RenderEngine>>,
@@ -17,13 +25,92 @@ pub struct WaterfallJsAPI {
 #[wasm_bindgen]
 impl WaterfallJsAPI {
     #[wasm_bindgen(getter)]
-    pub fn spectrum_visible(&self) -> bool {
-        self.waterfall.borrow_mut().is_spectrum_visible()
+    pub fn center_freq_hz(&self) -> f64 {
+        self.waterfall.borrow_mut().get_freq_samprate().0
+    }
+    #[wasm_bindgen(setter)]
+    pub fn set_center_freq_hz(&self, value: f64) -> Result<(), JsValue> {
+        let mut waterfall = self.waterfall.borrow_mut();
+        let sample_rate_hz = waterfall.get_freq_samprate().1;
+        waterfall.set_freq_samprate(
+            value,
+            sample_rate_hz,
+            &mut self.render_engine.borrow_mut(),
+        )?;
+        Ok(())
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn sample_rate_hz(&self) -> f64 {
+        self.waterfall.borrow_mut().get_freq_samprate().1
+    }
+    #[wasm_bindgen(setter)]
+    pub fn set_sample_rate_hz(&self, value: f64) -> Result<(), JsValue> {
+        let mut waterfall = self.waterfall.borrow_mut();
+        let center_freq_hz = waterfall.get_freq_samprate().0;
+        waterfall.set_freq_samprate(
+            center_freq_hz,
+            value,
+            &mut self.render_engine.borrow_mut(),
+        )?;
+        Ok(())
+    }
+
+    #[wasm_bindgen]
+    pub fn set_freq_samprate(
+        &self,
+        center_freq_hz: f64,
+        sample_rate_hz: f64,
+    ) -> Result<(), JsValue> {
+        self.waterfall.borrow_mut().set_freq_samprate(
+            center_freq_hz,
+            sample_rate_hz, &mut self.render_engine.borrow_mut(),
+        )?;
+        Ok(())
     }
 
     #[wasm_bindgen(setter)]
+    pub fn set_colormap(&self, value: &str) -> Result<(), JsValue> {
+        let cmap = colormap_from_string(value)?;
+        let mut render_engine = self.render_engine.borrow_mut();
+        self.waterfall
+            .borrow()
+            .load_colormap(&mut render_engine, cmap.colormap_as_slice())
+            .unwrap();
+        Ok(())
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_waterfall_max_db(&self, value: f32) {
+        self.waterfall.borrow_mut().set_waterfall_max(value);
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_waterfall_min_db(&self, value: f32) {
+        self.waterfall.borrow_mut().set_waterfall_min(value);
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_waterfall_update_rate_hz(&self, value: f32) {
+        self.waterfall.borrow_mut().set_waterfall_update_rate(value);
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn spectrum_visible(&self) -> bool {
+        self.waterfall.borrow_mut().is_spectrum_visible()
+    }
+    #[wasm_bindgen(setter)]
     pub fn set_spectrum_visible(&self, value: bool) {
         self.waterfall.borrow_mut().set_spectrum_visible(value);
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn waterfall_visible(&self) -> bool {
+        self.waterfall.borrow_mut().is_waterfall_visible()
+    }
+    #[wasm_bindgen(setter)]
+    pub fn set_waterfall_visible(&self, value: bool) {
+        self.waterfall.borrow_mut().set_waterfall_visible(value);
     }
 }
 
@@ -38,35 +125,27 @@ pub fn make_waterfall(canvas_id: &str) -> Result<WaterfallJsAPI, JsValue> {
     );
     let (render_engine, waterfall, _) = maia_wasm::new_waterfall(&window, &document, &canvas)?;
 
-    let center_freq = 915e6;
-    let samp_rate = 960e3;
-    // An averaging of 8 and FFT size of 4096 were used to construct the
-    // waterfall data
-    let waterfall_averaging = 8;
-    let waterfall_rate = samp_rate / ((NFFT * waterfall_averaging) as f64);
-    {
-        let mut waterfall = waterfall.borrow_mut();
-        waterfall.set_freq_samprate(center_freq, samp_rate, &mut render_engine.borrow_mut())?;
-        waterfall.set_waterfall_min(25.0);
-        waterfall.set_waterfall_max(95.0);
-        waterfall.set_waterfall_update_rate(waterfall_rate as f32);
-    }
+    Ok(WaterfallJsAPI{waterfall: waterfall, render_engine: render_engine})
+}
 
+#[wasm_bindgen]
+pub fn generate_waterfall(waterfall_api: &WaterfallJsAPI) -> Result<(), JsValue> {
+    let (window, _document) = maia_wasm::get_window_and_document()?;
     let mut generator = WaterfallGenerator::new();
     let handler = Closure::<dyn FnMut()>::new({
-        let waterfall = Rc::clone(&waterfall);
+        let waterfall = Rc::clone(&waterfall_api.waterfall);
         move || {
             generator.put_line(&mut waterfall.borrow_mut());
         }
     });
-    let interval_ms = (1000.0 / waterfall_rate).round() as i32;
+    let interval_ms = 34;
     window.set_interval_with_callback_and_timeout_and_arguments_0(
         handler.into_js_value().unchecked_ref(),
         interval_ms,
     )?;
 
-    maia_wasm::setup_render_loop(render_engine.clone(), waterfall.clone());
-    Ok(WaterfallJsAPI{waterfall: waterfall, render_engine: render_engine})
+    maia_wasm::setup_render_loop(waterfall_api.render_engine.clone(), waterfall_api.waterfall.clone());
+    Ok(())
 }
 
 // We generate waterfall lines by reading a JPEG file that is embedded in the wasm file
