@@ -1,8 +1,5 @@
 import "./widget.css";
-import init, {
-  generate_waterfall,
-  make_waterfall,
-} from "../bindings/pkg/maia_waterfall_widget_wasm";
+import init, { make_waterfall } from "../bindings/pkg/maia_waterfall_widget_wasm";
 
 async function initialize({ model }) {
   await init();
@@ -54,9 +51,14 @@ function render({ model, el }) {
   model.on("change:waterfall_visible", () => {
     waterfall.waterfall_visible = model.get("waterfall_visible");
   });
-
-  generate_waterfall(waterfall);
-  console.log("render() done");
+  model.on("msg:custom", (msg, buffers) => {
+    if (msg === "put_spectrum") {
+      for (const dataview of buffers) {
+        let spec = new Float32Array(dataview.buffer);
+        waterfall.put_waterfall_spectrum(spec);
+      }
+    }
+  });
 }
 
 export default { initialize, render };

@@ -2,6 +2,7 @@ import importlib.metadata
 import pathlib
 
 import anywidget
+import numpy as np
 import traitlets
 
 _DEV = True  # switch to False for production
@@ -36,3 +37,13 @@ class Widget(anywidget.AnyWidget):
     waterfall_min_db = traitlets.Float(25.0).tag(sync=True)
     waterfall_update_rate_hz = traitlets.Float(29.296875).tag(sync=True)
     waterfall_visible = traitlets.Bool(True).tag(sync=True)
+
+    def put_spectrum(
+        self, linear_spectrum: np.ndarray[tuple[int | int, int], np.dtype[np.generic]]
+    ):
+        spec_f32 = np.ascontiguousarray(linear_spectrum, dtype=np.float32)
+        if len(spec_f32.shape) == 1:
+            buffers = [spec_f32]
+        else:
+            buffers = [s for s in spec_f32]
+        self.send("put_spectrum", buffers=buffers)

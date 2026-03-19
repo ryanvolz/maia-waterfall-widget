@@ -4,8 +4,6 @@ use maia_wasm::waterfall::Waterfall;
 use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::prelude::*;
 
-const NFFT: usize = 4096;
-
 fn colormap_from_string(colormap_str: &str) -> Result<Colormap, &str> {
     match colormap_str {
         "turbo" => Ok(Colormap::Turbo),
@@ -38,6 +36,11 @@ impl WaterfallJsAPI {
             &mut self.render_engine.borrow_mut(),
         )?;
         Ok(())
+    }
+
+    #[wasm_bindgen]
+    pub fn put_waterfall_spectrum(&mut self, spectrum_linear: &js_sys::Float32Array) {
+        self.waterfall.borrow_mut().put_waterfall_spectrum(spectrum_linear);
     }
 
     #[wasm_bindgen(getter)]
@@ -125,72 +128,7 @@ pub fn make_waterfall(canvas_id: &str) -> Result<WaterfallJsAPI, JsValue> {
     );
     let (render_engine, waterfall, _) = maia_wasm::new_waterfall(&window, &document, &canvas)?;
 
+    maia_wasm::setup_render_loop(render_engine.clone(), waterfall.clone());
+
     Ok(WaterfallJsAPI{waterfall: waterfall, render_engine: render_engine})
-}
-
-#[wasm_bindgen]
-pub fn generate_waterfall(waterfall_api: &WaterfallJsAPI) -> Result<(), JsValue> {
-    let (window, _document) = maia_wasm::get_window_and_document()?;
-    let mut generator = WaterfallGenerator::new();
-    let handler = Closure::<dyn FnMut()>::new({
-        let waterfall = Rc::clone(&waterfall_api.waterfall);
-        move || {
-            generator.put_line(&mut waterfall.borrow_mut());
-        }
-    });
-    let interval_ms = 34;
-    window.set_interval_with_callback_and_timeout_and_arguments_0(
-        handler.into_js_value().unchecked_ref(),
-        interval_ms,
-    )?;
-
-    maia_wasm::setup_render_loop(waterfall_api.render_engine.clone(), waterfall_api.waterfall.clone());
-    Ok(())
-}
-
-// We generate waterfall lines by reading a JPEG file that is embedded in the wasm file
-
-const WATERFALL_JPEG: &[u8; 888519] = include_bytes!("waterfall.jpg");
-const WATERFALL_LINES: usize = 3955;
-
-struct WaterfallGenerator {
-    data: Box<[f32]>,
-    current_line: usize,
-}
-
-impl WaterfallGenerator {
-    fn new() -> WaterfallGenerator {
-        let mut decoder = jpeg_decoder::Decoder::new(&WATERFALL_JPEG[..]);
-        let pixels = decoder.decode().expect("failed to decode waterfall JPEG");
-        let data = pixels
-            .into_iter()
-            .map(|x| {
-                // Scale from 0-255 JPEG pixel data to dB units. The dB range in
-                // the waterfall is 67.7 dB. The range in the JPEG is the full
-                // 0-255 range. We arbitrarily set the minimum waterfall power
-                // to 20 dB.
-                let db = 67.7 * f32::from(x) / 255.0 + 20.0;
-                // convert dB to linear power units
-                10.0_f32.powf(0.1 * db)
-            })
-            .collect::<Vec<_>>()
-            .into_boxed_slice();
-        WaterfallGenerator {
-            data,
-            current_line: 0,
-        }
-    }
-
-    fn put_line(&mut self, waterfall: &mut Waterfall) {
-        let line = &self.data[NFFT * self.current_line..NFFT * (self.current_line + 1)];
-        self.current_line += 1;
-        if self.current_line == WATERFALL_LINES {
-            self.current_line = 0;
-        }
-        // Safety: the view into self.data is always dropped before self.data
-        unsafe {
-            let line = js_sys::Float32Array::view(line);
-            waterfall.put_waterfall_spectrum(&line);
-        }
-    }
 }
