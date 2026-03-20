@@ -93,8 +93,6 @@ dependencies = [
 [[package]]
 name = "maia-json"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1cddf9a2b039ab909314f22a74d3e2be296d90088a658e5412719f1e6226281"
 dependencies = [
  "serde",
 ]
@@ -102,8 +100,6 @@ dependencies = [
 [[package]]
 name = "maia-wasm"
 version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b05ff21668fb5f6d33f968733abc5ab674d8ab2f527ae39ea8b41da60ecc244"
 dependencies = [
  "console_error_panic_hook",
  "git-version",

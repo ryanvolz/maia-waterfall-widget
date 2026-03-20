@@ -9,13 +9,17 @@ function render({ model, el }) {
   el.classList.add("maia_waterfall_widget");
   const canvas = document.createElement("canvas");
   canvas.id = "waterfall";
-  canvas.width = 4096;
-  canvas.height = 512;
+  canvas.width = model.get("_num_freq_samples");
+  canvas.height = model.get("_num_time_samples");
   canvas.style.width = "100%";
   // add canvas to document body so make_waterfall can find it (it can't be
   // found in the document from el because `render` would need to finish first)
   document.body.appendChild(canvas);
-  const waterfall = make_waterfall(canvas.id);
+  const waterfall = make_waterfall(
+    canvas.id,
+    model.get("_num_freq_samples"),
+    model.get("_num_time_samples"),
+  );
   // set initial waterfall state from model
   waterfall.colormap = model.get("colormap");
   waterfall.set_freq_samprate(model.get("center_freq_hz"), model.get("sample_rate_hz"));

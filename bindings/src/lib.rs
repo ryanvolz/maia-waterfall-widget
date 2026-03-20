@@ -1,6 +1,6 @@
 use maia_wasm::render::RenderEngine;
 use maia_wasm::ui::colormap::Colormap;
-use maia_wasm::waterfall::Waterfall;
+use maia_wasm::waterfall::{Waterfall, WaterfallShape};
 use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::prelude::*;
 
@@ -24,7 +24,7 @@ pub struct WaterfallJsAPI {
 impl WaterfallJsAPI {
     #[wasm_bindgen(getter)]
     pub fn center_freq_hz(&self) -> f64 {
-        self.waterfall.borrow_mut().get_freq_samprate().0
+        self.waterfall.borrow().get_freq_samprate().0
     }
     #[wasm_bindgen(setter)]
     pub fn set_center_freq_hz(&self, value: f64) -> Result<(), JsValue> {
@@ -45,7 +45,7 @@ impl WaterfallJsAPI {
 
     #[wasm_bindgen(getter)]
     pub fn sample_rate_hz(&self) -> f64 {
-        self.waterfall.borrow_mut().get_freq_samprate().1
+        self.waterfall.borrow().get_freq_samprate().1
     }
     #[wasm_bindgen(setter)]
     pub fn set_sample_rate_hz(&self, value: f64) -> Result<(), JsValue> {
@@ -100,7 +100,7 @@ impl WaterfallJsAPI {
 
     #[wasm_bindgen(getter)]
     pub fn spectrum_visible(&self) -> bool {
-        self.waterfall.borrow_mut().is_spectrum_visible()
+        self.waterfall.borrow().is_spectrum_visible()
     }
     #[wasm_bindgen(setter)]
     pub fn set_spectrum_visible(&self, value: bool) {
@@ -109,7 +109,7 @@ impl WaterfallJsAPI {
 
     #[wasm_bindgen(getter)]
     pub fn waterfall_visible(&self) -> bool {
-        self.waterfall.borrow_mut().is_waterfall_visible()
+        self.waterfall.borrow().is_waterfall_visible()
     }
     #[wasm_bindgen(setter)]
     pub fn set_waterfall_visible(&self, value: bool) {
@@ -118,7 +118,11 @@ impl WaterfallJsAPI {
 }
 
 #[wasm_bindgen]
-pub fn make_waterfall(canvas_id: &str) -> Result<WaterfallJsAPI, JsValue> {
+pub fn make_waterfall(
+    canvas_id: &str,
+    num_freq_samples: usize,
+    num_time_samples: usize,
+) -> Result<WaterfallJsAPI, JsValue> {
     let (window, document) = maia_wasm::get_window_and_document()?;
     let canvas = Rc::new(
         document
@@ -126,7 +130,19 @@ pub fn make_waterfall(canvas_id: &str) -> Result<WaterfallJsAPI, JsValue> {
             .ok_or(&format!("unable to get {canvas_id} canvas element"))?
             .dyn_into::<web_sys::HtmlCanvasElement>()?,
     );
-    let (render_engine, waterfall, _) = maia_wasm::new_waterfall(&window, &document, &canvas)?;
+    let (
+        render_engine,
+        waterfall,
+        _,
+    ) = maia_wasm::new_waterfall(
+        &window,
+        &document,
+        &canvas,
+        WaterfallShape {
+            freq: num_freq_samples,
+            time: num_time_samples,
+        },
+    )?;
 
     maia_wasm::setup_render_loop(render_engine.clone(), waterfall.clone());
 
