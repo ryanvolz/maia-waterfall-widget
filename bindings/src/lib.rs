@@ -43,6 +43,12 @@ impl WaterfallJsAPI {
         self.waterfall.borrow_mut().put_waterfall_spectrum(spectrum_linear);
     }
 
+    #[wasm_bindgen]
+    pub fn resize_canvas(&mut self) {
+        self.render_engine.borrow_mut().resize_canvas();
+        self.waterfall.borrow_mut().resize_canvas(&mut self.render_engine.borrow_mut());
+    }
+
     #[wasm_bindgen(getter)]
     pub fn sample_rate_hz(&self) -> f64 {
         self.waterfall.borrow().get_freq_samprate().1

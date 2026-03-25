@@ -49,6 +49,8 @@ class Waterfall(anywidget.AnyWidget):
         values={"turbo", "viridis", "inferno"},
         default_value="turbo",
     ).tag(sync=True)
+    mqtt_topic = traitlets.Unicode("").tag(sync=True)
+    mqtt_url = traitlets.Unicode("").tag(sync=True)
     sample_rate_hz = traitlets.Float(960e3).tag(sync=True)
     spectrum_visible = traitlets.Bool(False).tag(sync=True)
     waterfall_max_db = traitlets.Float(95.0).tag(sync=True)
