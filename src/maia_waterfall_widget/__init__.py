@@ -44,18 +44,20 @@ class Waterfall(anywidget.AnyWidget):
     _num_freq_samples = traitlets.Int(4096).tag(sync=True)
     _num_time_samples = traitlets.Int(512).tag(sync=True)
 
-    center_freq_hz = traitlets.Float(915e6).tag(sync=True)
     colormap = traitlets.Enum(
         values={"turbo", "viridis", "inferno"},
         default_value="turbo",
     ).tag(sync=True)
+    freq_samprate_hz = traitlets.Tuple(
+        traitlets.Float(), traitlets.Float(), default_value=(0.0, 10e6)
+    ).tag(sync=True)
     mqtt_topic = traitlets.Unicode("").tag(sync=True)
     mqtt_url = traitlets.Unicode("").tag(sync=True)
-    sample_rate_hz = traitlets.Float(960e3).tag(sync=True)
     spectrum_visible = traitlets.Bool(False).tag(sync=True)
-    waterfall_max_db = traitlets.Float(95.0).tag(sync=True)
-    waterfall_min_db = traitlets.Float(25.0).tag(sync=True)
-    waterfall_update_rate_hz = traitlets.Float(29.296875).tag(sync=True)
+    subchannel_idx = traitlets.Int(0).tag(sync=True)
+    waterfall_max_db = traitlets.Float(0.0).tag(sync=True)
+    waterfall_min_db = traitlets.Float(-70.0).tag(sync=True)
+    waterfall_update_rate_hz = traitlets.Float(None, allow_none=True).tag(sync=True)
     waterfall_visible = traitlets.Bool(True).tag(sync=True)
 
     def __init__(
@@ -73,9 +75,25 @@ class Waterfall(anywidget.AnyWidget):
         super().__init__(*args, **kwargs)
         if not isinstance(waterfall_shape, WaterfallShape):
             waterfall_shape = WaterfallShape(*waterfall_shape)
-        self.shape = waterfall_shape
+        self.waterfall_shape = waterfall_shape
         self._num_freq_samples = waterfall_shape.freq
         self._num_time_samples = waterfall_shape.time
+
+    @property
+    def center_freq_hz(self):
+        return self.freq_samprate_hz[0]
+
+    @center_freq_hz.setter
+    def center_freq_hz(self, new_center_freq_hz: float):
+        self.freq_samprate_hz = (new_center_freq_hz, self.freq_samprate_hz[1])
+
+    @property
+    def sample_rate_hz(self):
+        return self.freq_samprate_hz[1]
+
+    @sample_rate_hz.setter
+    def sample_rate_hz(self, new_sample_rate_hz: float):
+        self.freq_samprate_hz = (self.freq_samprate_hz[0], new_sample_rate_hz)
 
     def put_spectrum(
         self, linear_spectrum: np.ndarray[tuple[int | int, int], np.dtype[np.generic]]

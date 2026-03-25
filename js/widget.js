@@ -37,11 +37,15 @@ function render({ model, el }) {
 
   // set initial waterfall state from model
   waterfall.colormap = model.get("colormap");
-  waterfall.set_freq_samprate(model.get("center_freq_hz"), model.get("sample_rate_hz"));
+  const freq_samprate = model.get("freq_samprate_hz");
+  waterfall.set_freq_samprate(freq_samprate[0], freq_samprate[1]);
   waterfall.spectrum_visible = model.get("spectrum_visible");
   waterfall.waterfall_max_db = model.get("waterfall_max_db");
   waterfall.waterfall_min_db = model.get("waterfall_min_db");
-  waterfall.waterfall_update_rate_hz = model.get("waterfall_update_rate_hz");
+  const waterfall_update_rate_hz = model.get("waterfall_update_rate_hz");
+  if (waterfall_update_rate_hz) {
+    waterfall.waterfall_update_rate_hz = waterfall_update_rate_hz;
+  }
   waterfall.waterfall_visible = model.get("waterfall_visible");
 
   // initialize mqtt
@@ -54,20 +58,18 @@ function render({ model, el }) {
     connect_mqtt({ model: model, mqtt_state: mqtt_state, waterfall: waterfall });
   }
 
-  model.on("change:center_freq_hz", () => {
-    waterfall.center_freq_hz = model.get("center_freq_hz");
-  });
   model.on("change:colormap", () => {
     waterfall.colormap = model.get("colormap");
+  });
+  model.on("change:freq_samprate_hz", () => {
+    const freq_samprate = model.get("freq_samprate_hz");
+    waterfall.set_freq_samprate(freq_samprate[0], freq_samprate[1]);
   });
   model.on("change:mqtt_topic", () => {
     subscribe_mqtt({ model: model, mqtt_state: mqtt_state });
   });
   model.on("change:mqtt_url", () => {
     connect_mqtt({ model: model, mqtt_state: mqtt_state, waterfall: waterfall });
-  });
-  model.on("change:sample_rate_hz", () => {
-    waterfall.sample_rate_hz = model.get("sample_rate_hz");
   });
   model.on("change:spectrum_visible", () => {
     waterfall.spectrum_visible = model.get("spectrum_visible");
@@ -79,7 +81,10 @@ function render({ model, el }) {
     waterfall.waterfall_min_db = model.get("waterfall_min_db");
   });
   model.on("change:waterfall_update_rate_hz", () => {
-    waterfall.waterfall_update_rate_hz = model.get("waterfall_update_rate_hz");
+    const waterfall_update_rate_hz = model.get("waterfall_update_rate_hz");
+    if (waterfall_update_rate_hz) {
+      waterfall.waterfall_update_rate_hz = waterfall_update_rate_hz;
+    }
   });
   model.on("change:waterfall_visible", () => {
     waterfall.waterfall_visible = model.get("waterfall_visible");
@@ -118,6 +123,7 @@ function connect_mqtt({ model, mqtt_state, waterfall }) {
     });
     mqtt_state.client.on("message", (topic, payload, packet) => {
       if (packet.properties.contentType == "<float32") {
+        // f32buffer format
         const shape = JSON.parse(packet.properties.userProperties.shape);
         if (shape[1] != model.get("_num_freq_samples")) {
           console.info(`Received spectrum shape ${shape} does not match in number of \
@@ -134,36 +140,51 @@ frequency bins ${model.get("_num_freq_samples")}. Discarding.`);
           sample_rate_hz != model.get("sample_rate_hz") ||
           center_freq_hz != model.get("center_freq_hz")
         ) {
-          model.set("sample_rate_hz", sample_rate_hz);
-          model.set("center_freq_hz", center_freq_hz);
+          model.set("freq_samprate_hz", [center_freq_hz, sample_rate_hz]);
+          model.save_changes();
         }
         const spectrum_rate_hz = JSON.parse(
           packet.properties.userProperties.spectrum_rate_hz,
         );
         if (spectrum_rate_hz != model.get("waterfall_update_rate_hz")) {
           model.set("waterfall_update_rate_hz", spectrum_rate_hz);
+          model.save_changes();
         }
         const full_spec = new Float32Array(
           // slice buffer to force copy since it might not be aligned for float32
           payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.length),
         );
-        const subch = 0;
-        const spec = full_spec.subarray(subch * shape[1], (subch + 1) * shape[1]);
+        const num_subchannels = shape[0];
+        const subch = model.get("subchannel_idx") % num_subchannels;
+        // need to copy the subchannel data using slice because waterfall requires
+        // sole access to the memory
+        const spec = full_spec.slice(subch * shape[1], (subch + 1) * shape[1]);
         waterfall.put_waterfall_spectrum(spec);
+      } else {
+        const msg = JSON.parse(payload);
+        if (msg.data && msg.type == "float32") {
+          // radiohound format
+          if (
+            msg.sample_rate != model.get("sample_rate_hz") ||
+            msg.center_frequency != model.get("center_freq_hz")
+          ) {
+            model.set("freq_samprate_hz", [msg.center_frequency, msg.sample_rate]);
+            model.save_changes();
+          }
+          if (1 / msg.metadata.scan_time != model.get("waterfall_update_rate_hz")) {
+            model.set("waterfall_update_rate_hz", 1 / msg.metadata.scan_time);
+            model.save_changes();
+          }
+          const bytes = Uint8Array.fromBase64(msg.data);
+          const full_spec = new Float32Array(bytes.buffer);
+          const num_subchannels = Math.floor(full_spec.length / msg.metadata.nfft);
+          const subch = model.get("subchannel_idx") % num_subchannels;
+          // need to copy the subchannel data using slice because waterfall requires
+          // sole access to the memory
+          const spec = full_spec.slice(subch * shape[1], (subch + 1) * shape[1]);
+          waterfall.put_waterfall_spectrum(spec);
+        }
       }
-      // radiohound format
-      //   const msg = JSON.parse(payload);
-      //   if (msg.data && msg.type == "float32") {
-      //     const bytes = Uint8Array.fromBase64(msg.data);
-      //     let spec = new Float32Array(bytes.buffer);
-      //     waterfall.put_waterfall_spectrum(spec);
-      //     if (
-      //       msg.sample_rate != model.get("sample_rate_hz") ||
-      //       msg.center_frequency != model.get("center_freq_hz")
-      //     ) {
-      //       waterfall.set_freq_samprate(msg.center_frequency, msg.sample_rate);
-      //     }
-      //   }
     });
     if (mqtt_state.topic) {
       // re-subscribe to existing topic

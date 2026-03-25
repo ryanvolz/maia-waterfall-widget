@@ -1,6 +1,7 @@
 div.maia_waterfall_widget {
     width: 100%;
     height: 100%;
+    overflow: hidden;
 }
 
 canvas.maia_waterfall_widget {
