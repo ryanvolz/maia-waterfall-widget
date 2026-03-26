@@ -52,6 +52,7 @@ function render({ model, el }) {
   const mqtt_state = {
     client: null,
     topic: model.get("mqtt_topic"),
+    last_spectrum_timestamp: 0,
   };
   if (model.get("mqtt_url")) {
     // connect and, if there's a topic, subscribe
@@ -159,7 +160,7 @@ frequency bins ${model.get("_num_freq_samples")}. Discarding.`);
         // need to copy the subchannel data using slice because waterfall requires
         // sole access to the memory
         const spec = full_spec.slice(subch * shape[1], (subch + 1) * shape[1]);
-        waterfall.put_waterfall_spectrum(spec);
+        put_spectrum_throttled({ model, mqtt_state, waterfall, spec });
       } else {
         const msg = JSON.parse(payload);
         if (msg.data && msg.type == "float32") {
@@ -182,7 +183,7 @@ frequency bins ${model.get("_num_freq_samples")}. Discarding.`);
           // need to copy the subchannel data using slice because waterfall requires
           // sole access to the memory
           const spec = full_spec.slice(subch * shape[1], (subch + 1) * shape[1]);
-          waterfall.put_waterfall_spectrum(spec);
+          put_spectrum_throttled({ model, mqtt_state, waterfall, spec });
         }
       }
     });
@@ -205,6 +206,25 @@ function subscribe_mqtt({ model, mqtt_state }) {
     }
   }
   mqtt_state.topic = model.get("mqtt_topic");
+}
+
+function put_spectrum_throttled({ model, mqtt_state, waterfall, spec }) {
+  // using last timestamp, determine when we should put this spectrum
+  const update_interval_ms = 1000.0 / model.get("waterfall_update_rate_hz");
+  const target_ts = mqtt_state.last_spectrum_timestamp + update_interval_ms;
+  const now = performance.now();
+  const wait_ms = target_ts - now;
+  if (wait_ms > 0) {
+    // we still have to wait, set a timeout
+    setTimeout(() => {
+      waterfall.put_waterfall_spectrum(spec);
+    }, Math.floor(wait_ms));
+    mqtt_state.last_spectrum_timestamp = target_ts;
+  } else {
+    // we're behind / don't have to wait, immediately put the spectrum
+    waterfall.put_waterfall_spectrum(spec);
+    mqtt_state.last_spectrum_timestamp = now;
+  }
 }
 
 export default { initialize, render };
