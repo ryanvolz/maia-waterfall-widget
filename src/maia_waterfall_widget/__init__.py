@@ -68,8 +68,12 @@ class Waterfall(anywidget.AnyWidget):
         Parameters
         ----------
         waterfall_shape : WaterfallShape | tuple[int, int]
-            Waterfall shape in number of time samples (height) by
-            number of frequency samples (width): (n_time, n_freq).
+            Waterfall shape in visible number of time samples
+            (height) by number of frequency samples (width):
+            (n_time, n_freq).
+            [Note: the internal texture will hold twice the
+             number of time samples to enable the scrolling
+             animation.]
 
         """
         super().__init__(*args, **kwargs)

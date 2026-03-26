@@ -144,9 +144,11 @@ pub fn make_waterfall(
         &window,
         &document,
         &canvas,
+        // WaterfallShape specifies the texture size, which requires twice
+        // the number of visible time samples to enable animated scrolling
         WaterfallShape {
             freq: num_freq_samples,
-            time: num_time_samples,
+            time: 2 * num_time_samples,
         },
     )?;
 
