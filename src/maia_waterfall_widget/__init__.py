@@ -18,9 +18,9 @@ try:
     ).read_text("direct_url.json")
     pkg_is_editable = json.loads(direct_url).get("dir_info", {}).get("editable", False)
 except (importlib.metadata.PackageNotFoundError, TypeError):
-    pkt_is_editable = False
+    pkg_is_editable = False
 
-if pkt_is_editable:
+if pkg_is_editable:
     # from `npx vite`
     ESM = "http://localhost:5173/js/widget.js?anywidget"
     CSS = ""
