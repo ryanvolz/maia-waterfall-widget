@@ -1,19 +1,26 @@
 import dataclasses
 import importlib.metadata
+import json
 import pathlib
 
 import anywidget
 import numpy as np
 import traitlets
 
-_DEV = True  # switch to False for production
-
 try:
     __version__ = importlib.metadata.version("maia_waterfall_widget")
 except importlib.metadata.PackageNotFoundError:
     __version__ = "unknown"
 
-if _DEV:
+try:
+    direct_url = importlib.metadata.Distribution.from_name(
+        "maia_waterfall_widget"
+    ).read_text("direct_url.json")
+    pkg_is_editable = json.loads(direct_url).get("dir_info", {}).get("editable", False)
+except (importlib.metadata.PackageNotFoundError, TypeError):
+    pkt_is_editable = False
+
+if pkt_is_editable:
     # from `npx vite`
     ESM = "http://localhost:5173/js/widget.js?anywidget"
     CSS = ""
