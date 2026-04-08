@@ -123,7 +123,7 @@ function connect_mqtt({ model, mqtt_state, waterfall }) {
       console.log(error);
     });
     mqtt_state.client.on("message", (topic, payload, packet) => {
-      if (packet.properties.contentType == "<float32") {
+      if (packet.properties?.contentType == "<float32") {
         // f32buffer format
         const shape = JSON.parse(packet.properties.userProperties.shape);
         if (shape[1] != model.get("_num_freq_samples")) {
@@ -182,7 +182,10 @@ frequency bins ${model.get("_num_freq_samples")}. Discarding.`);
           const subch = model.get("subchannel_idx") % num_subchannels;
           // need to copy the subchannel data using slice because waterfall requires
           // sole access to the memory
-          const spec = full_spec.slice(subch * shape[1], (subch + 1) * shape[1]);
+          const spec = full_spec.slice(
+            subch * msg.metadata.nfft,
+            (subch + 1) * msg.metadata.nfft,
+          );
           put_spectrum_throttled({ model, mqtt_state, waterfall, spec });
         }
       }
