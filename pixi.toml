@@ -3,31 +3,42 @@ authors = ["Ryan Volz <rvolz@mit.edu>"]
 channels = ["https://prefix.dev/conda-forge"]
 name = "maia_waterfall_widget"
 platforms = ["linux-64"]
-version = "0.1.0"
+preview = ["pixi-build"]
 
-[environments]
-default = { solve-group = "default" }
-dev = { features = ["dev"], solve-group = "default" }
+[package.build]
+backend = { name = "pixi-build-python", version = "*" }
 
-[pypi-dependencies]
-maia_waterfall_widget = { path = ".", editable = true }
+[package.build.config]
+ignore-pypi-mapping = false
 
-[dependencies]
+[package.build-dependencies]
 nodejs = ">=25.7.0,<25.8"
 rust = ">=1.94.0,<1.95"
 wasm-pack = ">=0.14.0,<0.15"
 rust-std-wasm32-unknown-unknown = ">=1.94.0,<2"
-numpy = ">=2.4.3,<3"
-anywidget = ">=0.9.21,<0.10"
 
-[tasks]
+[dev]
+maia_waterfall_widget = { path = "." }
 
-[feature.dev.dependencies]
+[pypi-dependencies]
+maia_waterfall_widget = { path = ".", editable = true }
+
+[feature.example.dependencies]
 watchfiles = ">=1.1.1,<2"
 jupyterlab = ">=4.5.6,<5"
 pillow = ">=12.1.1,<13"
 paho-mqtt = ">=2.1.0,<3"
-python-build = ">=1.4.2,<2"
+
+[feature.pkg.dependencies]
+maia_waterfall_widget = { path = "." }
+
+[environments]
+default = { features = ["dev", "example"], solve-group = "default"}
+test = { features = ["example", "pkg"], solve-group = "default", no-default-feature = true }
 
 [feature.dev.tasks]
-dev-rebuild = "pixi reinstall -e dev maia_waterfall_widget"
+build = "uv build"
+reinstall = "pixi reinstall -e default maia_waterfall_widget"
+
+[feature.example.tasks]
+example = { cmd = "jupyter lab example.ipynb", default-environment = "default"}
