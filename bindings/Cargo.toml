@@ -14,7 +14,7 @@ crate-type = ["cdylib"]
 jpeg-decoder = { version = "0.3", default-features = false }
 js-sys = "0.3"
 paste = "1"
-maia-wasm = { path = "../../maia-sdr/maia-wasm", version = "0.7" }
+maia-wasm = { git = "https://github.com/ryanvolz/maia-sdr.git", branch = "waterfall-custom" }
 wasm-bindgen = "0.2"
 
 [dependencies.web-sys]
