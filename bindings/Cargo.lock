@@ -93,6 +93,7 @@ dependencies = [
 [[package]]
 name = "maia-json"
 version = "0.6.0"
+source = "git+https://github.com/ryanvolz/maia-sdr.git?branch=waterfall-custom#de2777c839d85f501450c0591031dfa59372972d"
 dependencies = [
  "serde",
 ]
@@ -100,6 +101,7 @@ dependencies = [
 [[package]]
 name = "maia-wasm"
 version = "0.7.1"
+source = "git+https://github.com/ryanvolz/maia-sdr.git?branch=waterfall-custom#de2777c839d85f501450c0591031dfa59372972d"
 dependencies = [
  "console_error_panic_hook",
  "git-version",
