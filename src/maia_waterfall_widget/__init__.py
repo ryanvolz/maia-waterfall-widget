@@ -2,6 +2,7 @@ import dataclasses
 import importlib.metadata
 import json
 import pathlib
+import socket
 
 import anywidget
 import numpy as np
@@ -12,15 +13,18 @@ try:
 except importlib.metadata.PackageNotFoundError:
     __version__ = "unknown"
 
-try:
-    direct_url = importlib.metadata.Distribution.from_name(
-        "maia_waterfall_widget"
-    ).read_text("direct_url.json")
-    pkg_is_editable = json.loads(direct_url).get("dir_info", {}).get("editable", False)
-except (importlib.metadata.PackageNotFoundError, TypeError):
-    pkg_is_editable = False
 
-if pkg_is_editable:
+def is_port_in_use(host: str, port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex((host, port)) == 0
+
+
+try:
+    vite_live_esm = is_port_in_use("localhost", 5173)
+except Exception:
+    vite_live_esm = False
+
+if vite_live_esm:
     # from `npx vite`
     ESM = "http://localhost:5173/js/widget.js?anywidget"
     CSS = ""
