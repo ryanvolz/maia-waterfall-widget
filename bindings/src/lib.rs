@@ -13,11 +13,63 @@ fn colormap_from_string(colormap_str: &str) -> Result<Colormap, &str> {
     }
 }
 
+fn resample_spectrum(
+    spectrum_linear: &js_sys::Float32Array,
+    num_samples: usize,
+) -> Result<js_sys::Float32Array, String> {
+    // Fourier resampling a la scipy.signal.resample (without windowing)
+    let n_x = spectrum_linear.length() as usize;
+
+    if n_x == num_samples {
+        return Ok(spectrum_linear.clone());
+    }
+
+    let mut planner = realfft::RealFftPlanner::<f32>::new();
+    let rfft = planner.plan_fft_forward(n_x);
+    let irfft = planner.plan_fft_inverse(num_samples);
+    let mut x = spectrum_linear.to_vec();
+    // common vec for referencing result of forward FFT and input to inverse FFT
+    // using their corresponding complex output/input lengths
+    let mut y_vec = if n_x > num_samples {
+        rfft.make_output_vec()
+    } else {
+        // make_input_vec() initializes with zeros, so it will contain forward result
+        // zero-padded for use in the inverse real FFT
+        irfft.make_input_vec()
+    };
+    let mut x_r = irfft.make_output_vec();
+
+    match rfft.process(&mut x, &mut y_vec[..rfft.complex_len()]) {
+        Err(ffterr) => return Err(ffterr.to_string()),
+        Ok(val) => val,
+    }
+    // account for unpaired bin at m / 2
+    let m = std::cmp::min(num_samples, n_x);
+    if (m % 2) == 0 {
+        if num_samples < n_x {
+            y_vec[m / 2] = 2.0 * y_vec[m / 2];
+        } else {
+            y_vec[m / 2] = 0.5 * y_vec[m / 2];
+        }
+    }
+    // apply scaling (rfft/irfft do not apply any scaling)
+    for el in y_vec[..irfft.complex_len()].iter_mut() {
+        *el = *el / (n_x as f32);
+    }
+    match irfft.process(&mut y_vec[..irfft.complex_len()], &mut x_r) {
+        Err(ffterr) => return Err(ffterr.to_string()),
+        Ok(val) => val,
+    }
+
+    Ok(js_sys::Float32Array::new_from_slice(&x_r))
+}
+
 #[wasm_bindgen]
 #[derive(Clone)]
 pub struct WaterfallJsAPI {
     waterfall: Rc<RefCell<Waterfall>>,
     render_engine: Rc<RefCell<RenderEngine>>,
+    shape: WaterfallShape,
 }
 
 #[wasm_bindgen]
@@ -30,23 +82,28 @@ impl WaterfallJsAPI {
     pub fn set_center_freq_hz(&self, value: f64) -> Result<(), JsValue> {
         let mut waterfall = self.waterfall.borrow_mut();
         let sample_rate_hz = waterfall.get_freq_samprate().1;
-        waterfall.set_freq_samprate(
-            value,
-            sample_rate_hz,
-            &mut self.render_engine.borrow_mut(),
-        )?;
+        waterfall.set_freq_samprate(value, sample_rate_hz, &mut self.render_engine.borrow_mut())?;
         Ok(())
     }
 
     #[wasm_bindgen]
-    pub fn put_waterfall_spectrum(&mut self, spectrum_linear: &js_sys::Float32Array) {
-        self.waterfall.borrow_mut().put_waterfall_spectrum(spectrum_linear);
+    pub fn put_waterfall_spectrum(
+        &mut self,
+        spectrum_linear: &js_sys::Float32Array,
+    ) -> Result<(), JsValue> {
+        let resampled_spectrum_linear = resample_spectrum(spectrum_linear, self.shape.freq)?;
+        self.waterfall
+            .borrow_mut()
+            .put_waterfall_spectrum(&resampled_spectrum_linear);
+        Ok(())
     }
 
     #[wasm_bindgen]
     pub fn resize_canvas(&mut self) {
-        self.render_engine.borrow_mut().resize_canvas();
-        self.waterfall.borrow_mut().resize_canvas(&mut self.render_engine.borrow_mut());
+        self.render_engine.borrow_mut().resize_canvas().unwrap_or_default();
+        self.waterfall
+            .borrow_mut()
+            .resize_canvas(&mut self.render_engine.borrow_mut()).unwrap_or_default();
     }
 
     #[wasm_bindgen(getter)]
@@ -57,11 +114,7 @@ impl WaterfallJsAPI {
     pub fn set_sample_rate_hz(&self, value: f64) -> Result<(), JsValue> {
         let mut waterfall = self.waterfall.borrow_mut();
         let center_freq_hz = waterfall.get_freq_samprate().0;
-        waterfall.set_freq_samprate(
-            center_freq_hz,
-            value,
-            &mut self.render_engine.borrow_mut(),
-        )?;
+        waterfall.set_freq_samprate(center_freq_hz, value, &mut self.render_engine.borrow_mut())?;
         Ok(())
     }
 
@@ -73,7 +126,8 @@ impl WaterfallJsAPI {
     ) -> Result<(), JsValue> {
         self.waterfall.borrow_mut().set_freq_samprate(
             center_freq_hz,
-            sample_rate_hz, &mut self.render_engine.borrow_mut(),
+            sample_rate_hz,
+            &mut self.render_engine.borrow_mut(),
         )?;
         Ok(())
     }
@@ -136,23 +190,20 @@ pub fn make_waterfall(
             .ok_or(&format!("unable to get {canvas_id} canvas element"))?
             .dyn_into::<web_sys::HtmlCanvasElement>()?,
     );
-    let (
-        render_engine,
-        waterfall,
-        _,
-    ) = maia_wasm::new_waterfall(
-        &window,
-        &document,
-        &canvas,
-        // WaterfallShape specifies the texture size, which requires twice
-        // the number of visible time samples to enable animated scrolling
-        WaterfallShape {
-            freq: num_freq_samples,
-            time: 2 * num_time_samples,
-        },
-    )?;
+    // WaterfallShape specifies the texture size, which requires twice
+    // the number of visible time samples to enable animated scrolling
+    let shape = WaterfallShape {
+        freq: num_freq_samples,
+        time: 2 * num_time_samples,
+    };
+    let (render_engine, waterfall, _) =
+        maia_wasm::new_waterfall(&window, &document, &canvas, shape)?;
 
     maia_wasm::setup_render_loop(render_engine.clone(), waterfall.clone());
 
-    Ok(WaterfallJsAPI{waterfall: waterfall, render_engine: render_engine})
+    Ok(WaterfallJsAPI {
+        waterfall: waterfall,
+        render_engine: render_engine,
+        shape: shape,
+    })
 }
