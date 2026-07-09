@@ -38,6 +38,8 @@ test = { features = ["example", "pkg"], solve-group = "default", no-default-feat
 
 [feature.dev.tasks]
 build = "uv build"
+build-bindings = "npm run wasm"
+cargo-update = "cargo update --manifest-path bindings/Cargo.toml"
 reinstall = "pixi reinstall -e default maia_waterfall_widget"
 vite = "npx vite --host localhost --port 5173 --strictPort"
 
