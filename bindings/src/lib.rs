@@ -39,6 +39,12 @@ fn resample_spectrum(
     };
     let mut x_r = irfft.make_output_vec();
 
+    // first convert with ln so all reals are valid instead of just positive values
+    // (and thus interpolate in the space on which the spectrum will be viewed)
+    for el in x.iter_mut() {
+        *el = el.ln();
+    }
+
     match rfft.process(&mut x, &mut y_vec[..rfft.complex_len()]) {
         Err(ffterr) => return Err(ffterr.to_string()),
         Ok(val) => val,
@@ -61,6 +67,11 @@ fn resample_spectrum(
     match irfft.process(&mut y_vec[..irfft.complex_len()], &mut x_r) {
         Err(ffterr) => return Err(ffterr.to_string()),
         Ok(val) => val,
+    }
+
+    // convert back from reals to positive values by applying inverse of ln done above
+    for el in x_r.iter_mut() {
+        *el = el.exp();
     }
 
     Ok(js_sys::Float32Array::new_from_slice(&x_r))
