@@ -133,9 +133,6 @@ class Waterfall(anywidget.AnyWidget):
             be converted to 32-bit floating point.
 
         """
-        if linear_spectrum.shape[-1] != self._num_freq_samples:
-            msg = f"Spectrum size must match configured {self._num_freq_samples=}"
-            raise ValueError(msg)
         spec_f32 = np.ascontiguousarray(linear_spectrum, dtype=np.float32)
         if len(spec_f32.shape) == 1:
             buffers = [spec_f32]
