@@ -47,7 +47,9 @@ fn resample_spectrum(
     let m = std::cmp::min(num_samples, n_x);
     if (m % 2) == 0 {
         if num_samples < n_x {
-            y_vec[m / 2] = 2.0 * y_vec[m / 2];
+            // sample at bin m / 2 must also have imaginary part == 0 since it must
+            // be its own complex conjugate to satisfy symmetry
+            y_vec[m / 2] = y_vec[m / 2] + y_vec[m / 2].conj();
         } else {
             y_vec[m / 2] = 0.5 * y_vec[m / 2];
         }
