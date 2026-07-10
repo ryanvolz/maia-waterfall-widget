@@ -1,6 +1,7 @@
 {
   "author": "Ryan Volz <rvolz@mit.edu>",
   "name": "widget",
+  "license": "MIT OR Apache-2.0",
   "scripts": {
     "wasm": "cd bindings && wasm-pack build --target web",
     "predev": "npm run wasm",
