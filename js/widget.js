@@ -3,11 +3,11 @@ import mqtt from "mqtt";
 import "./widget.css";
 import init, { make_waterfall } from "../bindings/pkg/maia_waterfall_widget_wasm";
 
-async function initialize({ model }) {
+async function initialize({ model, signal }) {
   await init();
 }
 
-function render({ model, el }) {
+function render({ model, el, signal }) {
   // put canvas in a div so we have different ways to style it, like flex
   const div = document.createElement("div");
   div.classList.add("maia_waterfall_widget");
@@ -98,13 +98,34 @@ function render({ model, el }) {
       }
     }
   });
+
+  signal.addEventListener("abort", () => {
+    model.off("change:colormap");
+    model.off("change:freq_samprate_hz");
+    model.off("change:mqtt_topic");
+    model.off("change:mqtt_url");
+    model.off("change:spectrum_visible");
+    model.off("change:waterfall_max_db");
+    model.off("change:waterfall_min_dbchange:colormap");
+    model.off("change:waterfall_update_rate_hz");
+    model.off("change:waterfall_visible");
+    model.off("msg:custom");
+    disconnect_mqtt({ mqtt_state: mqtt_state });
+    waterfall.free();
+  });
 }
 
-function connect_mqtt({ model, mqtt_state, waterfall }) {
+function disconnect_mqtt({ mqtt_state }) {
   if (mqtt_state.client) {
     // disconnect existing client
     mqtt_state.client.end(true);
     mqtt_state.client = null;
+  }
+}
+
+function connect_mqtt({ model, mqtt_state, waterfall }) {
+  if (mqtt_state.client) {
+    disconnect_mqtt({ mqtt_state: mqtt_state });
   }
   if (model.get("mqtt_url")) {
     const options = {

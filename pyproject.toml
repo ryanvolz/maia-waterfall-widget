@@ -1,6 +1,6 @@
 [project]
 authors = [{name = "Ryan Volz", email = "rvolz@mit.edu"}]
-dependencies = ["anywidget", "numpy"]
+dependencies = ["anywidget>=0.11", "numpy"]
 name = "maia_waterfall_widget"
 requires-python = ">= 3.11"
 version = "0.1.0"
