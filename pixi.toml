@@ -27,6 +27,9 @@ maia_waterfall_widget = { path = "." }
 [pypi-dependencies]
 maia_waterfall_widget = { path = ".", editable = true }
 
+[feature.dev.dependencies]
+uv = "==0.11.28"
+
 [feature.example.dependencies]
 watchfiles = "==1.2.0"
 jupyterlab = "==4.5.7"
@@ -47,6 +50,7 @@ build-bindings = "npm run wasm"
 cargo-update = "cargo update --manifest-path bindings/Cargo.toml"
 reinstall = "pixi reinstall -e default maia_waterfall_widget"
 vite = "npx vite --host localhost --port 5173 --strictPort"
+
 
 [feature.example.tasks]
 example = { cmd = "jupyter lab example.ipynb", default-environment = "default"}
