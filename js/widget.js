@@ -126,11 +126,6 @@ function connect_mqtt({ model, mqtt_state, waterfall }) {
       if (packet.properties?.contentType == "<float32") {
         // f32buffer format
         const shape = JSON.parse(packet.properties.userProperties.shape);
-        if (shape[1] != model.get("_num_freq_samples")) {
-          console.info(`Received spectrum shape ${shape} does not match in number of \
-frequency bins ${model.get("_num_freq_samples")}. Discarding.`);
-          return;
-        }
         const sample_rate_hz = JSON.parse(
           packet.properties.userProperties.sample_rate_hz,
         );
