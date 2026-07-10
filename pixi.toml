@@ -4,7 +4,10 @@ channels = ["https://prefix.dev/conda-forge"]
 name = "maia_waterfall_widget"
 platforms = ["linux-64", "linux-aarch64", "osx-arm64", "osx-64", "win-64"]
 preview = ["pixi-build"]
+
+[package]
 license = "MIT OR Apache-2.0"
+license-file = "LICENSE-APACHE"
 
 [package.build]
 backend = { name = "pixi-build-python", version = "*" }
@@ -35,6 +38,7 @@ maia_waterfall_widget = { path = "." }
 
 [environments]
 default = { features = ["dev", "example"], solve-group = "default"}
+build = { features = ["dev", "pkg"], solve-group = "default", no-default-feature = true}
 test = { features = ["example", "pkg"], solve-group = "default", no-default-feature = true }
 
 [feature.dev.tasks]
