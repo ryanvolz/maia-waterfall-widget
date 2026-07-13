@@ -8,6 +8,7 @@ preview = ["pixi-build"]
 [package]
 license = "MIT OR Apache-2.0"
 license-file = "LICENSE-APACHE"
+version = "0.1.0"  # pixi-build does not support dynamic version yet
 
 [package.build]
 backend = { name = "pixi-build-python", version = "*" }
