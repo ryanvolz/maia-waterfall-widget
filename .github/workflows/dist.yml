@@ -9,6 +9,9 @@ on:
     paths:
       - .github/workflows/dist.
   push:
+    # ignore all tags since we run on release instead
+    tags-ignore:
+      - '**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
