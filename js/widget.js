@@ -102,7 +102,7 @@ function render({ model, el, signal }) {
     }
   });
 
-  signal.addEventListener("abort", () => {
+  signal?.addEventListener("abort", () => {
     model.off("change:colormap");
     model.off("change:freq_samprate_hz");
     model.off("change:mqtt_topic");
