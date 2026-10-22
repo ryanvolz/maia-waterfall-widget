@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 Massachusetts Institute of Technology
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
+use itertools::{izip, repeat_n};
 use maia_wasm::render::RenderEngine;
 use maia_wasm::ui::colormap::Colormap;
 use maia_wasm::waterfall::{Waterfall, WaterfallShape};
@@ -80,16 +81,164 @@ fn resample_spectrum(
     Ok(js_sys::Float32Array::new_from_slice(&x_r))
 }
 
+#[derive(Clone)]
+struct SpectrumAverage {
+    n_freq: usize,
+    n_time: usize,
+    history: Vec<f32>,
+    current_index: usize,
+    current_count: usize,
+    current_sum: Vec<f32>,
+}
+
+impl SpectrumAverage {
+    fn new(n_freq: usize, n_time: usize) -> Self {
+        Self {
+            n_freq: n_freq,
+            n_time: n_time,
+            history: vec![0.0; n_freq * n_time],
+            current_index: (n_time - 1),
+            current_count: 0,
+            current_sum: vec![0.0; n_freq],
+        }
+    }
+
+    fn reset(&mut self) {
+        self.current_index = self.n_time - 1;
+        self.current_count = 0;
+        // Store 1 more spectrum in the history that is not included in the sum
+        // so
+        self.history.resize(self.n_freq * self.n_time, 0.0);
+        for x in self.current_sum.iter_mut() {
+            *x = 0.0;
+        }
+    }
+
+    fn set_averaging_count(&mut self, n_time: usize) -> Result<(), &str> {
+        if n_time <= 0 {
+            return Err("Averaging count must be > 0");
+        } else if n_time == self.n_time {
+            return Ok(());
+        } else if n_time == 1 {
+            // Special case where we're not doing any averaging, so we can reset
+            self.n_time = n_time;
+            self.reset();
+        } else if n_time > self.n_time {
+            // Reserve the extra space
+            let n_added = n_time - self.n_time;
+            self.history.reserve(n_added);
+            // Insert zeros into history after current_index
+            let next_index = (self.current_index + 1) % n_time;
+            self.history.splice(
+                next_index * self.n_freq..next_index * self.n_freq,
+                repeat_n(0.0, n_added * self.n_freq),
+            );
+            // If we expanded the history before current_index (only when next_index == 0)
+            // then shift current_index to account for that
+            if next_index == 0 {
+                self.current_index += n_added;
+            }
+            self.n_time = n_time;
+        } else {
+            let mut n_removed = self.n_time - n_time;
+            let mut next_index = (self.current_index + 1) % self.n_time;
+            while n_removed > 0 {
+                let end_index = std::cmp::min(next_index + n_removed, self.n_time);
+                let removed: Vec<_> = self
+                    .history
+                    .drain(next_index * self.n_freq..end_index * self.n_freq)
+                    .collect();
+                let just_removed = end_index - next_index;
+                n_removed -= just_removed;
+                // Subtract removed data from the sum
+                for i_rem in 0..just_removed {
+                    let current_slice = &removed[i_rem * self.n_freq..(i_rem + 1) * self.n_freq];
+                    for (x_sum, x_old) in izip!(self.current_sum.iter_mut(), current_slice.iter()) {
+                        *x_sum = *x_sum - *x_old;
+                    }
+                }
+                // If we removed from the beginning of the vector, shift current_index
+                // to account for that
+                if next_index == 0 {
+                    self.current_index -= just_removed;
+                }
+                // Either we remove from beginning for next loop, or we're done
+                next_index = 0;
+            }
+            self.n_time = n_time;
+            self.current_count = std::cmp::min(self.current_count, self.n_time);
+        }
+        Ok(())
+    }
+
+    fn add_spectrum(&mut self, spectrum_linear: &js_sys::Float32Array) -> js_sys::Float32Array {
+        let n_freq = spectrum_linear.length() as usize;
+        if n_freq != self.n_freq {
+            // Incoming array has incompatible shape with current history, so
+            // update the shape and reset the stored history
+            self.n_freq = n_freq;
+            self.reset();
+        }
+
+        // Get slice of history where we will be storing incoming array (and subtracting old values)
+        self.current_index = (self.current_index + 1) % self.n_time;
+        let current_slice = &mut self.history
+            [self.current_index * self.n_freq..(self.current_index + 1) * self.n_freq];
+
+        // Update the current sum: sum = sum + new - old
+        // and store the new values into the history
+        let incoming_vec = spectrum_linear.to_vec();
+        for (x_sum, x_new, x_old) in izip!(
+            self.current_sum.iter_mut(),
+            incoming_vec.iter(),
+            current_slice.iter_mut()
+        ) {
+            if self.current_count == self.n_time {
+                *x_sum = *x_sum - *x_old;
+            }
+            *x_sum = *x_sum + *x_new;
+            *x_old = *x_new;
+        }
+
+        // Update the count of how many spectra the sum contains
+        if self.current_count < self.n_time {
+            self.current_count += 1;
+        }
+
+        self.get_average()
+    }
+
+    fn get_average(&self) -> js_sys::Float32Array {
+        let mut avg = Vec::with_capacity(self.n_freq);
+
+        for x in self.current_sum.iter() {
+            avg.push(x / (self.current_count as f32));
+        }
+        js_sys::Float32Array::new_from_slice(avg.as_slice())
+    }
+}
+
 #[wasm_bindgen]
 #[derive(Clone)]
 pub struct WaterfallJsAPI {
     waterfall: Rc<RefCell<Waterfall>>,
     render_engine: Rc<RefCell<RenderEngine>>,
     shape: WaterfallShape,
+    averaged_spectrum: SpectrumAverage,
 }
 
 #[wasm_bindgen]
 impl WaterfallJsAPI {
+    #[wasm_bindgen(getter)]
+    pub fn averaging_count(&self) -> usize {
+        self.averaged_spectrum.n_time
+    }
+    #[wasm_bindgen(setter)]
+    pub fn set_averaging_count(&mut self, value: usize) -> Result<(), JsValue> {
+        self.averaged_spectrum.set_averaging_count(value)?;
+        Ok(())
+    }
+
     #[wasm_bindgen(getter)]
     pub fn center_freq_hz(&self) -> f64 {
         self.waterfall.borrow().get_freq_samprate().0
@@ -107,7 +256,9 @@ impl WaterfallJsAPI {
         &mut self,
         spectrum_linear: &js_sys::Float32Array,
     ) -> Result<(), JsValue> {
-        let resampled_spectrum_linear = resample_spectrum(spectrum_linear, self.shape.freq)?;
+        let averaged_spectrum_linear = self.averaged_spectrum.add_spectrum(spectrum_linear);
+        let resampled_spectrum_linear =
+            resample_spectrum(&averaged_spectrum_linear, self.shape.freq)?;
         self.waterfall
             .borrow_mut()
             .put_waterfall_spectrum(&resampled_spectrum_linear);
@@ -116,10 +267,14 @@ impl WaterfallJsAPI {
 
     #[wasm_bindgen]
     pub fn resize_canvas(&mut self) {
-        self.render_engine.borrow_mut().resize_canvas().unwrap_or_default();
+        self.render_engine
+            .borrow_mut()
+            .resize_canvas()
+            .unwrap_or_default();
         self.waterfall
             .borrow_mut()
-            .resize_canvas(&mut self.render_engine.borrow_mut()).unwrap_or_default();
+            .resize_canvas(&mut self.render_engine.borrow_mut())
+            .unwrap_or_default();
     }
 
     #[wasm_bindgen(getter)]
@@ -221,5 +376,6 @@ pub fn make_waterfall(
         waterfall: waterfall,
         render_engine: render_engine,
         shape: shape,
+        averaged_spectrum: SpectrumAverage::new(num_freq_samples, 1),
     })
 }

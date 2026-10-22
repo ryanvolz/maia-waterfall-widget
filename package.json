@@ -3,7 +3,7 @@
   "name": "widget",
   "license": "MIT OR Apache-2.0",
   "scripts": {
-    "wasm": "cd bindings && wasm-pack build --target web",
+    "wasm": "cd bindings && wasm-pack build --target web --no-typescript",
     "predev": "npm run wasm",
     "prebuild": "npm run wasm",
     "dev": "vite build --watch",
@@ -11,13 +11,11 @@
   },
   "type": "module",
   "devDependencies": {
-    "@anywidget/vite": "^0.2.2",
-    "esbuild": "^0.25.4",
-    "vite": "^7.3.1",
-    "vite-plugin-top-level-await": "^1.6.0",
-    "vite-plugin-wasm": "^3.5.0"
+    "@anywidget/vite": "^0.3.0",
+    "esbuild": "^0.27.0",
+    "vite": "npm:rolldown-vite@7.3.1"
   },
   "dependencies": {
-    "mqtt": "^5.15.0"
+    "mqtt": "^5.15.2"
   }
 }

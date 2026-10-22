@@ -57,6 +57,7 @@ class Waterfall(anywidget.AnyWidget):
     _num_freq_samples = traitlets.Int(4096).tag(sync=True)
     _num_time_samples = traitlets.Int(512).tag(sync=True)
 
+    averaging_count = traitlets.Int(1).tag(sync=True)
     colormap = traitlets.Enum(
         values={"turbo", "viridis", "inferno"},
         default_value="turbo",
@@ -113,7 +114,7 @@ class Waterfall(anywidget.AnyWidget):
         self.freq_samprate_hz = (self.freq_samprate_hz[0], new_sample_rate_hz)
 
     def put_spectrum(
-        self, linear_spectrum: np.ndarray[tuple[int | int, int], np.dtype[np.generic]]
+        self, linear_spectrum: np.ndarray[tuple[int, int], np.dtype[np.generic]]
     ):
         """Add a spectrum line or lines to the waterfall display.
 

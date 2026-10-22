@@ -39,6 +39,7 @@ function render({ model, el, signal }) {
   resizeObserver.observe(canvas);
 
   // set initial waterfall state from model
+  waterfall.averaging_count = model.get("averaging_count");
   waterfall.colormap = model.get("colormap");
   const freq_samprate = model.get("freq_samprate_hz");
   waterfall.set_freq_samprate(freq_samprate[0], freq_samprate[1]);
@@ -62,6 +63,9 @@ function render({ model, el, signal }) {
     connect_mqtt({ model: model, mqtt_state: mqtt_state, waterfall: waterfall });
   }
 
+  model.on("change:averaging_count", () => {
+    waterfall.averaging_count = model.get("averaging_count");
+  });
   model.on("change:colormap", () => {
     waterfall.colormap = model.get("colormap");
   });
@@ -103,6 +107,7 @@ function render({ model, el, signal }) {
   });
 
   signal?.addEventListener("abort", () => {
+    model.off("change:averaging_count");
     model.off("change:colormap");
     model.off("change:freq_samprate_hz");
     model.off("change:mqtt_topic");
