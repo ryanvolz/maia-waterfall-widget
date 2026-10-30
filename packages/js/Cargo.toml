@@ -1,11 +1,14 @@
 [package]
-name = "maia-waterfall-widget-wasm"
-version = "0.1.0"
+name = "maia-waterfall"
+# Remember to also update the version in recipe.yaml
+# Probably a good idea to run `pixi run cargo-update` too
+version = "0.2.0"
 edition = "2024"
 authors = ["Ryan Volz <rvolz@mit.edu>"]
-description = "Maia SDR waterfall widget WebAssembly bindings"
+description = "Spectral waterfall display in a canvas, derived from Maia SDR"
 license = "MIT OR Apache-2.0"
 publish = false
+repository = "https://github.com/ryanvolz/maia-waterfall"
 
 [lib]
 crate-type = ["cdylib"]

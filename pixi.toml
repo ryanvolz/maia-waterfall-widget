@@ -1,57 +1,67 @@
 [workspace]
 authors = ["Ryan Volz <rvolz@mit.edu>"]
 channels = ["https://prefix.dev/conda-forge"]
-name = "maia_waterfall_widget"
+name = "maia-waterfall"
 platforms = ["linux-64", "linux-aarch64", "osx-arm64", "osx-64", "win-64"]
 preview = ["pixi-build"]
 
-[package]
-license = "MIT OR Apache-2.0"
-license-file = "LICENSE-APACHE"
-version = "0.1.0"  # pixi-build does not support dynamic version yet
-
-[package.build]
-backend = { name = "pixi-build-python", version = "*" }
-
-[package.build.config]
-ignore-pypi-mapping = false
-
-[package.build-dependencies]
-nodejs = "*"
-rust = "*"
-wasm-pack = "*"
-rust-std-wasm32-unknown-unknown = "*"
-
-[dev]
-maia_waterfall_widget = { path = "." }
-
-[pypi-dependencies]
-maia_waterfall_widget = { path = ".", editable = true }
-
-[feature.dev.dependencies]
-uv = "==0.11.28"
-
-[feature.example.dependencies]
-watchfiles = "==1.2.0"
-jupyterlab = "==4.5.7"
-pillow = "==12.2.0"
-paho-mqtt = "==2.1.0"
-
-[feature.pkg.dependencies]
-maia_waterfall_widget = { path = "." }
-
 [environments]
-default = { features = ["dev", "example"], solve-group = "default"}
-build = { features = ["dev", "pkg"], solve-group = "default", no-default-feature = true}
-test = { features = ["example", "pkg"], solve-group = "default", no-default-feature = true }
+default = { features = ["js", "widget"], solve-group = "default" }
+js = { features = ["js"], solve-group = "default", no-default-feature = true }
+js-dev = { features = ["js-dev"], solve-group = "default", no-default-feature = true }
+widget = { features = ["widget"], solve-group = "default", no-default-feature = true }
+widget-dev = { features = ["widget-dev"], solve-group = "default", no-default-feature = true }
 
-[feature.dev.tasks]
-build = "uv build"
-build-bindings = "npm run wasm"
-cargo-update = "cargo update --manifest-path bindings/Cargo.toml"
-reinstall = "pixi reinstall -e default maia_waterfall_widget"
-vite = "npx vite --host localhost --port 5173 --strictPort"
+[tasks]
+clean-build = "pixi clean --build"
 
+[feature.js.dependencies]
+maia-waterfall-js = { path = "packages/js" }
 
-[feature.example.tasks]
-example = { cmd = "jupyter lab example.ipynb", default-environment = "default"}
+[feature.js.tasks.js-build]
+cmd = "echo Built!"
+description = "Dummy task so that other tasks can depend on the built environment"
+default-environment = "js"
+
+[feature.js-dev.dev]
+maia-waterfall-js = { path = "packages/js" }
+
+[feature.js-dev.tasks.cargo-update]
+cmd = "cargo update --manifest-path packages/js/Cargo.toml"
+description = "Update rust dependencies"
+
+[feature.js-dev.tasks.npm-publish]
+cmd = "npm publish ./.pixi/envs/default/lib/node_modules/maia-waterfall"
+depends-on = [{ task = "js-build", environment = "default" }]
+description = "Publish maia-waterfall Javascript package to npm"
+
+[feature.widget.dependencies]
+jupyterlab = "*"
+maia-waterfall-widget = { path = "packages/widget" }
+pillow = "*"
+
+[feature.widget.tasks.example-widget]
+cmd = "jupyter lab example.ipynb"
+cwd = "examples"
+description = "Open example notebook demonstrating maia_waterfall_widget"
+
+[feature.widget-dev.dependencies]
+maia-waterfall-js = { path = "packages/js" }
+
+[feature.widget-dev.dev]
+maia-waterfall-widget = { path = "packages/widget" }
+
+[feature.widget-dev.tasks.lock-update-widget]
+cmd = "npm update --package-lock-only"
+cwd = "packages/widget"
+description = "Update widget package-lock.json"
+
+[feature.widget-dev.tasks.build-widget-js]
+cmd = "npm install && npm link maia-waterfall && npm run build"
+cwd = "packages/widget"
+description = "Bundle maia-waterfall-widget javascript module"
+
+[feature.widget-dev.tasks.build-widget-wheel]
+cmd = "uv build --out-dir dist packages/widget"
+depends-on = ["build-widget-js"]
+description = "Build maia-waterfall-widget wheel and sdist"

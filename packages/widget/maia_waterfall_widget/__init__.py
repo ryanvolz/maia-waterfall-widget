@@ -28,7 +28,7 @@ except Exception:
 
 if vite_live_esm:
     # from `npx vite`
-    ESM = "http://localhost:5173/js/widget.js?anywidget"
+    ESM = "http://localhost:5173/packages/widget/src/widget.js?anywidget"
     CSS = ""
 else:
     # from `npx vite build`

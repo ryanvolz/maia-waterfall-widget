@@ -4,9 +4,9 @@ import anywidget from "@anywidget/vite";
 
 export default defineConfig({
   build: {
-    outDir: "src/maia_waterfall_widget/static",
+    outDir: "maia_waterfall_widget/static",
     lib: {
-      entry: ["js/widget.js"],
+      entry: ["src/widget.js"],
       formats: ["es"],
     },
   },

@@ -1,0 +1,48 @@
+schema_version: 1
+
+context:
+  # Remember to also update version in pyproject.toml!
+  version: "0.2.0"
+
+package:
+  name: maia-waterfall-widget
+  version: ${{ version }}
+
+source:
+  path: .
+  use_gitignore: true
+
+build:
+  number: 0
+  noarch: python
+  script:
+    # maia-waterfall-js installs into host environment which is the npm
+    # "global" prefix, so it needs to be linked into the local node_modules
+    content: |
+      npm install
+      npm link maia-waterfall
+      npm run build
+      uv pip install --python "$PYTHON" --reinstall -vv \
+          --no-deps \
+          --no-build-isolation \
+          --no-index \
+          .
+
+requirements:
+  build:
+    - nodejs
+  host:
+    - hatchling
+    - maia-waterfall-js[url="source://?path=..%2Fjs"]
+    - python
+    - uv
+  run:
+    - anywidget >=0.11
+    - python
+    - numpy
+
+about:
+  license: MIT OR Apache-2.0
+  license_file:
+    - LICENSE-APACHE
+    - LICENSE-MIT

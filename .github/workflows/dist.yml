@@ -23,8 +23,8 @@ env:
   FORCE_COLOR: 3
 
 jobs:
-  build:
-    name: Build
+  build-widget-wheel:
+    name: Build maia-waterfall-widget wheel and sdist
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.0
@@ -35,18 +35,18 @@ jobs:
         with:
           pixi-version: v0.72.2
           environments: >-
-            build
+            widget-dev
 
       - name: Run build
-        run: pixi run --frozen -e build build
+        run: pixi run --frozen -e widget-dev build-widget-wheel
 
       - uses: actions/upload-artifact@v7.0.1
         with:
-          name: dist-build
+          name: dist-build-widget-wheel
           path: dist/*
 
   upload_all:
-    needs: [build]
+    needs: [build-widget-wheel]
     environment: pypi
     permissions:
       id-token: write

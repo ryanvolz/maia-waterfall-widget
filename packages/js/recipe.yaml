@@ -1,0 +1,51 @@
+schema_version: 1
+
+context:
+  # Remember to also update version in Cargo.toml!
+  version: "0.2.0"
+
+package:
+  name: maia-waterfall-js
+  version: ${{ version }}
+
+source:
+  path: .
+  use_gitignore: true
+
+build:
+  number: 0
+  string: ${{ "win" if win else "unix" }}_${{ build_number }}
+  noarch: generic
+  script:
+    # Specify cargo cache/build directories outside of build work dir
+    # so rust dependencies do not have to be rebuilt.
+    # Going up two levels lets environment and publish builds share.
+    env:
+      CARGO_TARGET_DIR: ../../cargo-target
+      CARGO_BUILD_BUILD_DIR: ../../cargo-target
+      CARGO_HOME: ../../cargo-home
+    content: |
+      wasm-pack build --target web --no-typescript
+      wasm-pack pack
+      npm install -g "./pkg/maia-waterfall-${{ version }}.tgz"
+
+requirements:
+  build:
+    - nodejs
+    - rust
+    - rust-std-wasm32-unknown-unknown
+    - wasm-pack
+  run:
+    - if: unix
+      then: __unix
+    - if: win
+      then: __win
+
+tests:
+  - package_contents:
+      strict: true
+      files:
+        - "**/node_modules/maia-waterfall/maia_waterfall.js"
+        - "**/node_modules/maia-waterfall/maia_waterfall_bg.wasm"
+        - "**/node_modules/maia-waterfall/package.json"
+        - "**/node_modules/maia-waterfall/*"

@@ -1,47 +1,48 @@
-# maia_waterfall_widget
+# maia_waterfall
 
-## Installation
+maia_waterfall is a collection of packages for displaying a spectral waterfall on a web browser `<canvas>`. The waterfall display run in WebGL and is derived from Maia SDR, hence the name.
 
-```sh
-pip install maia_waterfall_widget
-```
+## Packages
 
-or with [uv](https://github.com/astral-sh/uv):
-
-```sh
-uv add maia_waterfall_widget
-```
+- [maia-waterfall-js](packages/js): WebAssembly library and its Javascript wrapper
+- [maia-waterfall-widget](packages/widget): Python [anywidget](https://anywidget.dev/) for use in Jupyter and Marimo notebooks
 
 ## Development
 
 We recommend using [pixi](https://pixi.prefix.dev) for development.
 It will automatically manage virtual environments and dependencies for you.
 
-To install the package from source and run the example notebook:
+To install the package from source and run the example Jupyter notebook:
 
 ```sh
-pixi run example
+pixi run example-widget
 ```
 
-To use the development environment containing the editable package and all build tools:
-
+To activate a test environment containing the conda packages:
 ```sh
 pixi shell
 ```
 
-To build Python wheel and sdist that will be placed in the `dist/` directory:
-```sh
-pixi run build
-```
-
-To build a conda package:
+To build conda packages that will be placed in the `dist/` directory:
 ```sh
 pixi publish --target-dir dist
 ```
 
-To use a test environment containing the conda package:
+To build `maia_waterfall_widget` Python wheel and sdist that will be placed in the `dist/` directory:
 ```sh
-pixi shell -e test
+pixi run build-widget-wheel
+```
+
+To publish the `maia-waterfall` Javascript package to npm:
+```sh
+pixi run npm-publish
+```
+
+To update dependencies and lockfiles:
+```sh
+pixi update
+pixi run cargo-update
+pixi run lock-update-widget
 ```
 
 ## License

@@ -10,7 +10,3 @@ dist
 # Python
 __pycache__
 .ipynb_checkpoints
-
-bindings/Cargo.lock
-bindings/target
-src/maia_waterfall_widget/static

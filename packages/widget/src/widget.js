@@ -4,7 +4,7 @@
 import mqtt from "mqtt";
 
 import "./widget.css";
-import init, { make_waterfall } from "../bindings/pkg/maia_waterfall_widget_wasm";
+import init, { make_waterfall } from "maia-waterfall";
 
 async function initialize({ model, signal }) {
   await init();

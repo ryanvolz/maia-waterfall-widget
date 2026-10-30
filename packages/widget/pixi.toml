@@ -1,0 +1,6 @@
+[package]
+name = "maia-waterfall-widget"
+publish = true
+
+[package.build.backend]
+name = "pixi-build-rattler-build"
