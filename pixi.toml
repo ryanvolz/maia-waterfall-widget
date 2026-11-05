@@ -7,13 +7,34 @@ preview = ["pixi-build"]
 
 [environments]
 default = { features = ["js", "widget"], solve-group = "default" }
+clean = { features = ["clean"], no-default-feature = true }
 js = { features = ["js"], solve-group = "default", no-default-feature = true }
 js-dev = { features = ["js-dev"], solve-group = "default", no-default-feature = true }
+nicegui-dev = { features = ["nicegui-dev"], solve-group = "default", no-default-feature = true }
 widget = { features = ["widget"], solve-group = "default", no-default-feature = true }
 widget-dev = { features = ["widget-dev"], solve-group = "default", no-default-feature = true }
 
-[tasks]
-clean-build = "pixi clean --build"
+[feature.clean.tasks.clean-build]
+cmd = "pixi clean --build"
+description = "Remove pixi publish/build artifacts"
+
+[feature.clean.tasks.clean-js]
+cmd = "rm -rf pkg-bundler pkg-web target"
+cwd = "packages/js"
+description = "Clean development build files for js component"
+
+[feature.clean.tasks.clean-nicegui]
+cmd = "rm -rf node_modules maia_waterfall_nicegui/components/waterfall.js"
+cwd = "packages/nicegui"
+description = "Clean development build files for nicegui component"
+
+[feature.clean.tasks.clean-widget]
+cmd = "rm -rf node_modules maia_waterfall_widget/static/widget.*"
+cwd = "packages/widget"
+description = "Clean development build files for widget component"
+
+[feature.clean.tasks.clean]
+depends-on = ["clean-build", "clean-js", "clean-nicegui", "clean-widget"]
 
 [feature.js.dependencies]
 maia-waterfall-js = { path = "packages/js" }
@@ -34,6 +55,33 @@ description = "Update rust dependencies"
 cmd = "npm publish ./.pixi/envs/default/lib/node_modules/maia-waterfall"
 depends-on = [{ task = "js-build", environment = "default" }]
 description = "Publish maia-waterfall Javascript package to npm"
+
+[feature.nicegui-dev.dependencies]
+maia-waterfall-js = { path = "packages/js" }
+#maia-waterfall-nicegui = { path = "packages/nicegui" }
+
+[feature.nicegui-dev.dev]
+maia-waterfall-nicegui = { path = "packages/nicegui" }
+
+[feature.nicegui-dev.tasks.nicegui-dev]
+cmd = "python maia_waterfall_nicegui/app.py"
+cwd = "packages/nicegui"
+description = "Run NiceGUI demo app"
+
+[feature.nicegui-dev.tasks.lock-update-nicegui]
+cmd = "npm update --package-lock-only"
+cwd = "packages/nicegui"
+description = "Update nicegui package-lock.json"
+
+[feature.nicegui-dev.tasks.build-nicegui-js]
+cmd = "npm install && npm link maia-waterfall && npm run build"
+cwd = "packages/nicegui"
+description = "Bundle maia-waterfall-nicegui javascript component"
+
+[feature.nicegui-dev.tasks.build-nicegui-wheel]
+cmd = "uv build --out-dir dist packages/nicegui"
+depends-on = ["build-widget-js"]
+description = "Build maia-waterfall-nicegui wheel and sdist"
 
 [feature.widget.dependencies]
 jupyterlab = "*"

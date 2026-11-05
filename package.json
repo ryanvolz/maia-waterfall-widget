@@ -1,5 +1,0 @@
-{
-  "dependencies": {
-    "maia-waterfall": "file:.pixi/envs/widget-dev/lib/node_modules/maia-waterfall"
-  }
-}

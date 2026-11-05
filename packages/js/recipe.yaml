@@ -2,7 +2,7 @@ schema_version: 1
 
 context:
   # Remember to also update version in Cargo.toml!
-  version: "0.2.0"
+  version: "0.3.0"
 
 package:
   name: maia-waterfall-js
@@ -25,12 +25,17 @@ build:
       CARGO_BUILD_BUILD_DIR: ../../cargo-target
       CARGO_HOME: ../../cargo-home
     content: |
-      wasm-pack build --target web --no-typescript
-      wasm-pack pack
-      npm install -g "./pkg/maia-waterfall-${{ version }}.tgz"
+      wasm-pack build --target bundler --out-dir pkg-bundle
+      wasm-pack pack --pkg-dir pkg-bundle
+      npm install -g "./pkg-bundle/maia-waterfall-${{ version }}.tgz"
+      wasm-pack build --target web --out-dir pkg-web --out-name maia_waterfall_web
+      jaq --in-place '.name = "maia-waterfall-web"' pkg-web/package.json
+      wasm-pack pack --pkg-dir pkg-web
+      npm install -g "./pkg-web/maia-waterfall-web-${{ version }}.tgz"
 
 requirements:
   build:
+    - jaq
     - nodejs
     - rust
     - rust-std-wasm32-unknown-unknown
@@ -46,6 +51,13 @@ tests:
       strict: true
       files:
         - "**/node_modules/maia-waterfall/maia_waterfall.js"
+        - "**/node_modules/maia-waterfall/maia_waterfall_bg.js"
         - "**/node_modules/maia-waterfall/maia_waterfall_bg.wasm"
+        - "**/node_modules/maia-waterfall/maia_waterfall.d.ts"
         - "**/node_modules/maia-waterfall/package.json"
         - "**/node_modules/maia-waterfall/*"
+        - "**/node_modules/maia-waterfall-web/maia_waterfall_web.js"
+        - "**/node_modules/maia-waterfall-web/maia_waterfall_web_bg.wasm"
+        - "**/node_modules/maia-waterfall-web/maia_waterfall_web.d.ts"
+        - "**/node_modules/maia-waterfall-web/package.json"
+        - "**/node_modules/maia-waterfall-web/*"

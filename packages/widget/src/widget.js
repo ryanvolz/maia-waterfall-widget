@@ -4,7 +4,7 @@
 import mqtt from "mqtt";
 
 import "./widget.css";
-import init, { make_waterfall } from "maia-waterfall";
+import init, { make_waterfall } from "maia-waterfall-web";
 
 async function initialize({ model, signal }) {
   await init();

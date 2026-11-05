@@ -1,7 +1,5 @@
 import { defineConfig } from "vite";
 
-import anywidget from "@anywidget/vite";
-
 export default defineConfig({
   build: {
     outDir: "maia_waterfall_widget/static",
@@ -10,5 +8,4 @@ export default defineConfig({
       formats: ["es"],
     },
   },
-  plugins: [anywidget()],
 });

@@ -2,7 +2,7 @@ schema_version: 1
 
 context:
   # Remember to also update version in pyproject.toml!
-  version: "0.2.0"
+  version: "0.3.0"
 
 package:
   name: maia-waterfall-widget
@@ -20,7 +20,7 @@ build:
     # "global" prefix, so it needs to be linked into the local node_modules
     content: |
       npm install
-      npm link maia-waterfall
+      npm link maia-waterfall-web
       npm run build
       uv pip install --python "$PYTHON" --reinstall -vv \
           --no-deps \

@@ -2,7 +2,7 @@
 name = "maia-waterfall"
 # Remember to also update the version in recipe.yaml
 # Probably a good idea to run `pixi run cargo-update` too
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 authors = ["Ryan Volz <rvolz@mit.edu>"]
 description = "Spectral waterfall display in a canvas, derived from Maia SDR"
