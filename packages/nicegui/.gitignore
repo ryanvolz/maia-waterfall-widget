@@ -1,0 +1,4 @@
+dist
+maia_waterfall_nicegui/components/*
+.nicegui
+node_modules

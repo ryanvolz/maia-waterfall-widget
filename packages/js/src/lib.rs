@@ -218,6 +218,14 @@ impl SpectrumAverage {
     }
 }
 
+#[derive(Clone)]
+struct WaterfallState {
+    colormap: String,
+    max_db: f32,
+    min_db: f32,
+    update_rate_hz: Option<f32>,
+}
+
 #[wasm_bindgen]
 #[derive(Clone)]
 pub struct WaterfallJsAPI {
@@ -225,6 +233,7 @@ pub struct WaterfallJsAPI {
     render_engine: Rc<RefCell<RenderEngine>>,
     shape: WaterfallShape,
     averaged_spectrum: SpectrumAverage,
+    state: WaterfallState,
 }
 
 #[wasm_bindgen]
@@ -267,13 +276,11 @@ impl WaterfallJsAPI {
 
     #[wasm_bindgen]
     pub fn resize_canvas(&mut self) {
-        self.render_engine
-            .borrow_mut()
-            .resize_canvas()
-            .unwrap_or_default();
+        let mut engine = self.render_engine.borrow_mut();
+        engine.resize_canvas().unwrap_or_default();
         self.waterfall
             .borrow_mut()
-            .resize_canvas(&mut self.render_engine.borrow_mut())
+            .resize_canvas(&mut engine)
             .unwrap_or_default();
     }
 
@@ -303,9 +310,14 @@ impl WaterfallJsAPI {
         Ok(())
     }
 
+    #[wasm_bindgen(getter)]
+    pub fn colormap(&self) -> String {
+        self.state.colormap.clone()
+    }
     #[wasm_bindgen(setter)]
-    pub fn set_colormap(&self, value: &str) -> Result<(), JsValue> {
+    pub fn set_colormap(&mut self, value: &str) -> Result<(), JsValue> {
         let cmap = colormap_from_string(value)?;
+        self.state.colormap = value.to_string();
         let mut render_engine = self.render_engine.borrow_mut();
         self.waterfall
             .borrow()
@@ -314,18 +326,33 @@ impl WaterfallJsAPI {
         Ok(())
     }
 
+    #[wasm_bindgen(getter)]
+    pub fn waterfall_max_db(&self) -> f32 {
+        self.state.max_db
+    }
     #[wasm_bindgen(setter)]
-    pub fn set_waterfall_max_db(&self, value: f32) {
+    pub fn set_waterfall_max_db(&mut self, value: f32) {
+        self.state.max_db = value;
         self.waterfall.borrow_mut().set_waterfall_max(value);
     }
 
+    #[wasm_bindgen(getter)]
+    pub fn waterfall_min_db(&self) -> f32 {
+        self.state.min_db
+    }
     #[wasm_bindgen(setter)]
-    pub fn set_waterfall_min_db(&self, value: f32) {
+    pub fn set_waterfall_min_db(&mut self, value: f32) {
+        self.state.min_db = value;
         self.waterfall.borrow_mut().set_waterfall_min(value);
     }
 
+    #[wasm_bindgen(getter)]
+    pub fn waterfall_update_rate_hz(&self) -> Option<f32> {
+        self.state.update_rate_hz
+    }
     #[wasm_bindgen(setter)]
-    pub fn set_waterfall_update_rate_hz(&self, value: f32) {
+    pub fn set_waterfall_update_rate_hz(&mut self, value: f32) {
+        self.state.update_rate_hz = Some(value);
         self.waterfall.borrow_mut().set_waterfall_update_rate(value);
     }
 
@@ -377,5 +404,12 @@ pub fn make_waterfall(
         render_engine: render_engine,
         shape: shape,
         averaged_spectrum: SpectrumAverage::new(num_freq_samples, 1),
+        state: WaterfallState {
+            colormap: "turbo".to_string(),
+            last_spectrum_timestamp: 0.0,
+            max_db: 85.0,
+            min_db: 35.0,
+            update_rate_hz: None,
+        },
     })
 }

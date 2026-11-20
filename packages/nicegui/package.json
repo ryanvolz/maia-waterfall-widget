@@ -1,0 +1,15 @@
+{
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "vite": "^8.3.5",
+    "vite-plugin-css-injected-by-js": "^3.5.2"
+  },
+  "scripts": {
+    "build": "vite build",
+    "watch": "vite build --watch",
+    "clean": "rimraf ./dist/*"
+  },
+  "dependencies": {
+    "@vueuse/components": "^15.0.0"
+  }
+}

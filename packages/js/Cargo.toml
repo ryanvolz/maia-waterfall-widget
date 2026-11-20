@@ -26,6 +26,8 @@ itertools = "0.15.0"
 version = "0.3.72"
 features = [
   'HtmlCanvasElement',
+  'Performance',
+  'Window',
 ]
 
 [profile.release]
